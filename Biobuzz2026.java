@@ -20,12 +20,16 @@ public class Biobuzz2026 extends LinearOpMode {
     static final double INTAKE_ANTIHORARIO   =  1.0; // D-pad cima - 100%
     static final double INTAKE_HORARIO       = -1.0; // D-pad baixo - 100%
 
-    // Servo: posição vai de 0.0 a 1.0, que corresponde ao curso total do servo.
-    // REV Smart Robot Servo = 270 graus por padrão (se for um servo de 180, troque para 180)
+    // Servo (portão)
+    // Capacidade máxima do servo: REV Smart Robot Servo = 270 graus de fábrica
     static final double SERVO_CURSO_TOTAL = 270.0;
-    static final double SERVO_ANGULO      = 88.0;  // quanto gira ao apertar A
+    // Limite de segurança: o servo NUNCA passa de 1/4 de volta
+    static final double SERVO_LIMITE      = 90.0;
+    // Quanto o portão abre ao apertar A (no máximo SERVO_LIMITE)
+    static final double SERVO_ANGULO      = 88.0;
     static final double SERVO_POS_ZERO    = 0.0;
-    static final double SERVO_POS_88      = SERVO_ANGULO / SERVO_CURSO_TOTAL; // ~0.326
+    // Com o limite aplicado, a escala 0..1 passa a valer 0..90 graus
+    static final double SERVO_POS_88      = SERVO_ANGULO / SERVO_LIMITE; // ~0.978
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -58,6 +62,8 @@ public class Biobuzz2026 extends LinearOpMode {
         Servo servo = hardwareMap.servo.get("Servo");
         // Se ao apertar A ele girar anti-horário, troque para REVERSE
         servo.setDirection(Servo.Direction.FORWARD);
+        // Trava o servo entre 0 e 90 graus: qualquer posição pedida fica dentro desse intervalo
+        servo.scaleRange(0.0, SERVO_LIMITE / SERVO_CURSO_TOTAL);
 
         // ============ IMU ============
         IMU imu = hardwareMap.get(IMU.class, "imu");
