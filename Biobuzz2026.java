@@ -12,9 +12,16 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public class Biobuzz2026 extends LinearOpMode {
 
+    // Sentido de giro (olhando de frente para o eixo do motor):
+    // potência POSITIVA = anti-horário | potência NEGATIVA = horário
+    static final double SHOOTER_HORARIO      = -0.7; // RB - 70%
+    static final double SHOOTER_ANTIHORARIO  =  1.0; // LB - 100%
+    static final double INTAKE_ANTIHORARIO   =  1.0; // D-pad cima - 100%
+    static final double INTAKE_HORARIO       = -1.0; // D-pad baixo - 100%
+
     @Override
     public void runOpMode() throws InterruptedException {
-        // Motores nomeados pela posição no robô.
+        // ============ MECANUM - CONTROL HUB (gamepad1) ============
         // As strings entre aspas precisam bater com a configuração do Driver Hub.
         DcMotor frontLeft  = hardwareMap.dcMotor.get("Mecanum 1"); // porta 0 - frente esquerda
         DcMotor frontRight = hardwareMap.dcMotor.get("Mecanum 2"); // porta 1 - frente direita
@@ -27,7 +34,19 @@ public class Biobuzz2026 extends LinearOpMode {
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        // IMU do Control Hub
+        // ============ MECANISMOS - EXPANSION HUB (gamepad2) ============
+        DcMotor intake  = hardwareMap.dcMotor.get("Intake");
+        DcMotor shooter = hardwareMap.dcMotor.get("Shooter");
+
+        // Mantidos em FORWARD para o sentido seguir as constantes do topo
+        intake.setDirection(DcMotorSimple.Direction.FORWARD);
+        shooter.setDirection(DcMotorSimple.Direction.FORWARD);
+
+        // Intake trava ao soltar; shooter desacelera sozinho
+        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        // ============ IMU ============
         IMU imu = hardwareMap.get(IMU.class, "imu");
         // Ajuste conforme a montagem do hub no robô
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
@@ -40,6 +59,7 @@ public class Biobuzz2026 extends LinearOpMode {
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
+            // ============ MOVIMENTAÇÃO - GAMEPAD 1 ============
             double y = -gamepad1.left_stick_y; // eixo Y do analógico vem invertido
             double x = gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
@@ -69,10 +89,32 @@ public class Biobuzz2026 extends LinearOpMode {
             frontRight.setPower(frontRightPower);
             backRight.setPower(backRightPower);
 
-            // Telemetria para conferir no Driver Hub
+            // ============ SHOOTER - GAMEPAD 2 ============
+            // Segurando RB: horário 70% | Segurando LB: anti-horário 100% | Solto: parado
+            double shooterPower = 0;
+            if (gamepad2.right_bumper) {
+                shooterPower = SHOOTER_HORARIO;
+            } else if (gamepad2.left_bumper) {
+                shooterPower = SHOOTER_ANTIHORARIO;
+            }
+            shooter.setPower(shooterPower);
+
+            // ============ INTAKE - GAMEPAD 2 ============
+            // D-pad cima: anti-horário 100% | D-pad baixo: horário 100% | Solto: parado
+            double intakePower = 0;
+            if (gamepad2.dpad_up) {
+                intakePower = INTAKE_ANTIHORARIO;
+            } else if (gamepad2.dpad_down) {
+                intakePower = INTAKE_HORARIO;
+            }
+            intake.setPower(intakePower);
+
+            // ============ TELEMETRIA ============
             telemetry.addData("Heading (graus)", Math.toDegrees(botHeading));
             telemetry.addData("FL / FR", "%.2f / %.2f", frontLeftPower, frontRightPower);
             telemetry.addData("BL / BR", "%.2f / %.2f", backLeftPower, backRightPower);
+            telemetry.addData("Shooter", "%.2f", shooterPower);
+            telemetry.addData("Intake", "%.2f", intakePower);
             telemetry.update();
         }
     }
